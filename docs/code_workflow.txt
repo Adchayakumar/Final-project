@@ -1,0 +1,53 @@
+Performance Dashboard (tracker.py)
+
+Student / Teacher
+│
+├─▶ Opens page
+│   │
+│   ├─▶ **Auto Mode** – types Student-ID  
+│   │     → Dashboard fetches row from TiDB (`student_performance`)
+│   │     → PCA-transformed features → 3 models
+│   │     → Outputs: Score %, Pass/Fail, Drop-out risk
+│   │
+│   └─▶ **Manual Mode** – fills sliders / toggles
+│         → Same pipeline, but data entered live
+│
+└─▶ Visualised in neon-dark UI (progress bars, donut chart, cards)
+
+
+AI Tutor Chat (llm.py)
+
+Student
+│
+├─▶ **Login modal** – validated against TiDB `student_performance`
+│   (only valid IDs allowed)
+│
+├─▶ **Creates / selects chat** (sidebar)
+│   → Each chat = UUID + Gemini streaming session
+│
+├─▶ Types a question
+│   │
+│   ├─▶ **Foreground** – Gemini 2.0-Flash streams answer (+ follow-up Q)
+│   │
+│   └─▶ **Background** – `requests.post` to HF-Space `/predict`
+│         payload: {student_id, text}
+│
+└─▶ HF-Space logs topic to `log_table` for future learning analytics
+
+HF-Space Topic Service (fastapi_app.py)
+
+POST /predict
+│
+├─▶ Receives {student_id, text}
+├─▶ DeBERTa-v3-large zero-shot → subject label
+└─▶ INSERT INTO log_table (student_id, input_sample, subject, timestamp)
+
+
+Digit Recognition (Page-3)
+
+Student / Teacher
+│
+├─▶ Uploads image or uses webcam
+│   → Pre-trained CNN (ONNX / PyTorch) infers digit
+│   → Displays predicted digit + confidence
+│   → (Optional) saves result for micro-assessment tracking
