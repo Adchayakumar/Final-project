@@ -87,12 +87,13 @@
   python -m venv env && source env/bin/activate  # Windows: env\Scripts\activate
   pip install -r requirements.txt
 
-3.**Set env vars**
+3. **Set env vars**
   create env file
   'GOOGLE_API_KEY'
   'HF_TOKEN'
 
 4. **Launch**
   ```bash
+
   streamlit run app.py
 
