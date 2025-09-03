@@ -68,10 +68,12 @@ Developed as part of the GUVI Data Science course, this project is a Personalize
 - **Process**: Data scaled with `StandardScaler`, Elbow curve analyzed, and final clustering saved to `clustered_students.csv`.
 
 ### Cluster Mapping
-- **Cluster 0: Hard Worker** – High `attendance_rate` (>85%), `avg_daily_study_time` (>4 hours), and `homework_completion_rate` (>90%), reflecting diligent effort.
-- **Cluster 1: Smart Worker** – High `past_score` (>80%) and `quiz_accuracy` (>85%) with moderate `study_time` (<3 hours), indicating efficient learning.
-- **Cluster 2: Regular Student** – Average values across metrics (e.g., `attendance_rate` ~70-80%), balanced effort.
-- **Cluster 3 : Less Active** Student who study less and get the less marks .
+
+- **Cluster 0 :Quick Learner 🚀** - Proactive and successful students who are highly engaged and learn concepts quickly.
+
+- **Cluster 1: Regular Student 🚶‍♂️** - Consistent students who attend regularly and maintain steady, average academic performance.
+
+- **Cluster 2: Less Active Student ⚠️** - Disengaged students who show low motivation and struggle to keep up with their coursework.
 
 ## Workflow
 1. **Data Extraction** – Pull student records from **TiDB**.
