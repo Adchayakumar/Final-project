@@ -63,7 +63,7 @@ Developed as part of the GUVI Data Science course, this project is a Personalize
 
 ## Learning Style Determination
 ### Technique
-- **Clustering**: KMeans clustering with the Elbow method determined 4 optimal clusters based on features like `attendance_rate`, `avg_daily_study_time`, `past_score`, and `quiz_accuracy`.
+- **Clustering**:Minibatch-KMeans clustering with the Elbow method determined 3 optimal clusters based on features like `attendance_rate`, `avg_daily_study_time`, `past_score`, and `quiz_accuracy`.
 - **Features**: `attendance_rate`, `avg_daily_study_time`, `homework_completion_rate`, `past_score`, `motivation_level`, `video_time`, `quiz_time`, `homework_time`, `quiz_accuracy`, `use_ed_tech` (encoded).
 - **Process**: Data scaled with `StandardScaler`, Elbow curve analyzed, and final clustering saved to `clustered_students.csv`.
 
