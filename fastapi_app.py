@@ -5,7 +5,6 @@ POST /predict  ->  zero-shot subject prediction + save to TiDB
 import os
 import time
 from contextlib import asynccontextmanager
-
 import mysql.connector
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -15,8 +14,14 @@ from pydantic import BaseModel
 # ---------- load model ONCE ----------
 MODEL_NAME = "MoritzLaurer/deberta-v3-large-zeroshot-v1.1-all-33"
 LABELS = [
+    
     "Mathematics", "Physics", "Chemistry", "Biology",
-    "History", "Geography", "Literature", "Computer-Science"
+    "Accountancy", "Business Studies", "Economics",
+    "History", "Geography", "Political Science", "Sociology", "Psychology", "Philosophy",
+    "English", "Tamil", "Regional Language",
+    "Computer Science", "Informatics Practices",
+    "Physical Education", "Environmental Science",
+    "Fine Arts", "Home Science", "Entrepreneurship", "Artificial Intelligence"
 ]
 
 ml_models = {}

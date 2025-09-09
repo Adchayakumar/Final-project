@@ -1,12 +1,3 @@
-# =========================================================
-# ✅ Improved Streamlit App – Student Performance Dashboard
-# =========================================================
-# This app predicts student performance using updated models.
-# Features:
-# - Unified feature set for all models to reduce contradictions.
-# - Manual mode focuses on user input for model training with animated predictions.
-# - Code structure optimized with functions and error handling.
-# - Enhanced UI/UX with instructions and dynamic effects.
 
 import streamlit as st
 import pandas as pd
@@ -18,7 +9,7 @@ import plotly.graph_objects as go
 import numpy as np
 
 # ------------------- Page Config -------------------
-st.set_page_config(layout="wide", page_title="Student Performance Dashboard")
+st.set_page_config(layout="wide", page_title="Student Performance Dashboard",page_icon=":slightly_smiling_face:")
 st.markdown("""
 <style>
 .stApp { background-color: #0E1220; }
@@ -38,6 +29,60 @@ body, .stMarkdown, .stText { color: #FFFFFF; }
 .css-1d391kg { padding-top: 0px; }
 </style>
 """, unsafe_allow_html=True)
+
+# =========================================================
+# 1)  NEW CACHED LOADER  – clustering pipeline
+# =========================================================
+@st.cache_resource
+def load_clustering_assets():
+    """
+    Returns scaler, PCA and K-means trained on
+    ['attendance_rate', 'homework_completion_rate', 'past_score',
+     'motivation_level', 'video_time', 'quiz_time', 'homework_time',
+     'quiz_accuracy', 'use_ed_tech']
+    """
+    try:
+        cl_scaler = joblib.load('/content/scaler_object.pkl')
+        cl_pca    = joblib.load('/content/pca_object.pkl')
+        kmeans    = joblib.load('/content/mnkn_model.pkl')
+        return cl_scaler, cl_pca, kmeans
+    except FileNotFoundError as e:
+        st.error(f"Clustering asset missing: {e}")
+        return None, None, None
+
+cl_scaler, cl_pca, kmeans = load_clustering_assets()
+
+# =========================================================
+# 2)  CLUSTER FEATURE LIST & MAPPING
+# =========================================================
+cluster_features = [
+    'attendance_rate', 'homework_completion_rate', 'past_score',
+    'motivation_level', 'video_time', 'quiz_time', 'homework_time',
+    'quiz_accuracy', 'use_ed_tech'
+]
+cluster_map = {
+    0: "Regular student",
+    1: "Less active",
+    2: "Quick learner"
+}
+
+# =========================================================
+# 3)  HELPER – predict learning-style cluster
+# =========================================================
+def predict_cluster(user_dict):
+    """
+    user_dict must contain the 9 cluster_features (floats or ints).
+    Returns the mapped cluster name.
+    """
+    try:
+        df = pd.DataFrame([{f: float(user_dict[f]) for f in cluster_features}]) # order the features and convert to dataframe
+        X_scaled = cl_scaler.transform(df)  
+        X_pca    = cl_pca.transform(X_scaled)
+        cluster  = int(kmeans.predict(X_pca)[0])
+        return cluster_map.get(cluster, "Unknown")
+    except Exception as e:
+        st.error(f"Cluster prediction error: {e}")
+        return "Unknown"
 
 # ------------------- Load Models, Scaler & PCA -------------------
 @st.cache_resource
@@ -106,7 +151,7 @@ def get_student_data(student_id):
 
 # ------------------- Safe preprocessing -------------------
 def preprocess_input(raw_dict, scaler, pca):
-    enc = encode_row(raw_dict)
+    enc = encode_row(raw_dict) # Encode the cat column to num
     df = pd.DataFrame([enc])
     for col in unified_features:
         if col not in df.columns:
@@ -119,14 +164,14 @@ def preprocess_input(raw_dict, scaler, pca):
 # ------------------- Run all three models -------------------
 def run_models(student_dict):
     try:
-        X_pca = preprocess_input(student_dict, scaler, pca)
+        X_pca = preprocess_input(student_dict, scaler, pca) #Scale and pca
 
-        score = min(round(ridge.predict(X_pca)[0], 2), 99)
+        score = min(round(ridge.predict(X_pca)[0], 2), 99)  # Score prediction
 
-        pf_raw = calibrated_pass.predict(X_pca)[0]
+        pf_raw = calibrated_pass.predict(X_pca)[0]   # pass/fail prediction
         pf_num = 1 if pf_raw == 1 else 0
 
-        dropout_risk = calibrated_dropout.predict(X_pca)[0]
+        dropout_risk = calibrated_dropout.predict(X_pca)[0]  # dropout risk prediction
 
         # Consistency check
         if score >= 60 and pf_num == 0:
@@ -239,7 +284,7 @@ if not mode:
                 neon_progress_label("Homework Completion", hw_completion, "#00E5FF")
 
                 edtech_str = "Yes" if student_data.get("use_ed_tech", 0) == 1 else "No"
-                pref_style = student_data.get("preferred_learning_style", "N/A")
+                pref_style = student_data.get("learning_style", "N/A")
                 st.markdown(
                     "<div style='margin-top:8px;'><h4 style='margin:0 0 6px 0;'>Additional Info</h4></div>",
                     unsafe_allow_html=True,
@@ -331,43 +376,101 @@ if not mode:
             st.warning("Student ID not found!")
 
 else:
-    # ---------- POLISHED MANUAL MODE (from V2) ----------
-    st.subheader("🔧 Manual Input")
-    st.info(
-        "Enter values for the model features below. "
-        "Motivation Level is on a scale of 1–3."
-    )
+  # =========================================================
+  # 🔧 NEW WIZARD-STYLE MANUAL MODE
+  # =========================================================
+  st.subheader("🔧 Manual Prediction Wizard")
+  st.info("Step-by-step: enter data → choose outputs → get predictions.")
 
-    user_input = {}
-    for feature in unified_features:
-        label = feature.replace("_", " ").title()
-        if feature == "motivation_level":
-            user_input[feature] = st.slider(label, 1, 3, value=2)
-        elif feature == "use_ed_tech":
-            user_input[feature] = 1 if st.radio(label, ["Yes", "No"]) == "Yes" else 0
-        else:
-            user_input[feature] = st.number_input(label, value=0.0)
+  # ---------- STEP 1 – collect ALL inputs ----------
+  st.markdown("### 1️⃣  Enter Student Data")
 
-    if st.button("Predict"):
-        with st.spinner("Calculating predictions…"):
-            prediction = run_models(user_input)
+  # 9 features for the 3 performance models
+  perf_features = unified_features
+  # 9 features for clustering (identical here, but kept separate for clarity)
+  clust_features = cluster_features
 
-        # ----- animated reveal (V2) -----
-        pass_status = "PASS" if prediction["Pass/Fail"] == 1 else "FAIL"
-        pass_color = "#29FF87" if prediction["Pass/Fail"] == 1 else "#FF5C7A"
-        risk_status = "Yes" if prediction["Dropout Risk"] == 1 else "No"
-        risk_color = "#FF5C7A" if prediction["Dropout Risk"] == 1 else "#29FF87"
+  # Build one flat dict so we can loop once
+  all_features = list(dict.fromkeys(perf_features + clust_features))  # preserve order, no dupes
+  user_data = {}
 
-        st.markdown(
-            f"""
-            <div class="prediction-reveal"
-                 style="text-align:center; padding:20px; border-radius:10px;
-                        background-color:#232731;">
-                <h2>Prediction Results</h2>
-                <p><strong>Predicted Score:</strong> {prediction['Predicted Score']:.2f}%</p>
-                <p style="color:{pass_color};"><strong>Pass/Fail:</strong> {pass_status}</p>
-                <p style="color:{risk_color};"><strong>Dropout Risk:</strong> {risk_status}</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+  cols = st.columns(3)
+  for idx, feat in enumerate(all_features):
+      with cols[idx % 3]:
+          label = feat.replace("_", " ").title()
+          if feat == "motivation_level":
+              user_data[feat] = st.slider(label, 1, 3, value=2, key=f"slider_{feat}")
+          elif feat == "avg_stuudy_time":
+              user_data[feat] = st.slider(label, 2, 5, value=3, key=f"slider_{feat}")
+          elif feat == "use_ed_tech":
+              user_data[feat] = 1 if st.radio(label, ["Yes", "No"], key=f"radio_{feat}") == "Yes" else 0
+          else:
+              user_data[feat] = st.number_input(label, value=0.0, key=f"num_{feat}")
+
+  # ---------- STEP 2 – choose what to predict ----------
+  st.markdown("### 2️⃣  Choose Prediction Targets")
+  targets = st.multiselect(
+      "Select one or more:",
+      ["Score", "Pass/Fail", "Drop-out Risk", "Learning Style"],
+      default=["Score"]
+  )
+
+  # ---------- STEP 3 – compute & display ----------
+  if st.button("🚀  Run Prediction"):
+      if not targets:
+          st.warning("Please select at least one prediction target.")
+          st.stop()
+
+      results = {}
+
+      # ---- 1) SCORE ----
+      if "Score" in targets:
+          try:
+              X_perf = preprocess_input(user_data, scaler, pca)  # re-uses unified pipeline
+              score = min(round(ridge.predict(X_perf)[0], 2), 99)
+              results["Score"] = f"{score} %"
+          except Exception as e:
+              results["Score"] = f"Error: {e}"
+
+      # ---- 2) PASS/FAIL ----
+      if "Pass/Fail" in targets:
+          try:
+              X_perf = preprocess_input(user_data, scaler, pca)
+              pf_raw = calibrated_pass.predict(X_perf)[0]
+              results["Pass/Fail"] = "PASS" if pf_raw == 1 else "FAIL"
+          except Exception as e:
+              results["Pass/Fail"] = f"Error: {e}"
+
+      # ---- 3) DROP-OUT RISK ----
+      if "Drop-out Risk" in targets:
+          try:
+              X_perf = preprocess_input(user_data, scaler, pca)
+              risk_raw = calibrated_dropout.predict(X_perf)[0]
+              results["Drop-out Risk"] = "Yes" if risk_raw == 1 else "No"
+          except Exception as e:
+              results["Drop-out Risk"] = f"Error: {e}"
+
+      # ---- 4) LEARNING STYLE ----
+      if "Learning Style" in targets:
+          try:
+              learning_style = predict_cluster(user_data)  # uses clustering pipeline
+              results["Learning Style"] = learning_style
+          except Exception as e:
+              results["Learning Style"] = f"Error: {e}"
+
+      # ---------- DISPLAY ----------
+      st.markdown("### 3️⃣  Results")
+      cols = st.columns(len(results))
+      for col, (title, val) in zip(cols, results.items()):
+          color = "#29FF87" if "PASS" in str(val) or "No" in str(val) else "#FF5C7A"
+          if title == "Learning Style":
+              color = "#00E5FF"
+          col.markdown(
+              f"""
+              <div class="neon-card" style="box-shadow:0 0 20px {color}33;">
+                  <h4>{title}</h4>
+                  <h2 style="color:{color};">{val}</h2>
+              </div>
+              """,
+              unsafe_allow_html=True,
+          )
