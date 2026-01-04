@@ -6,7 +6,7 @@
 
 ## Project Overview
 ### Description
-Developed as part of the GUVI Data Science course, this project is a Personalized AI Tutor & Performance Tracker that leverages machine learning and AI to enhance student learning. It predicts performance metrics (score %, pass/fail, dropout risk) using PCA-transformed data from TiDB, offers real-time tutoring via Gemini 2.0-Flash, and includes features like digit recognition and topic tracking. The system is deployed as a multi-page Streamlit app for interactive use.
+Developed as part of the  GUVI Data Science course, this project is a Personalized AI Tutor & Performance Tracker that leverages machine learning and AI to enhance student learning. It predicts performance metrics (score %, pass/fail, dropout risk) using PCA-transformed data from TiDB, offers real-time tutoring via Gemini 2.0-Flash, and includes features like digit recognition and topic tracking. The system is deployed as a multi-page Streamlit app for interactive use.
 
 ### Features
 - 🔮 **Automated Performance Prediction** – Fetch student data from **TiDB** → PCA models return **score %**, **pass/fail**, **drop-out risk**.
